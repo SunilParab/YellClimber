@@ -36,8 +36,6 @@ public class PlayerController : PhysicsObject
 
         CheckGravity();
         Decelerate();
-
-        print(IsGrounded());
     }
 
     //Deceleration per physics step
@@ -82,7 +80,7 @@ public class PlayerController : PhysicsObject
         }
         else
         {
-            velocity = new(velocity.x,0);
+            velocity = new(velocity.x, 0);
         }
     }
 
