@@ -21,10 +21,12 @@ public class Trash : PhysicsObject
         rb = GetComponent<Rigidbody2D>();
     }
 
-    // Update is called once per frame
     void Update()
     {
-        //Add to velocity here
+        if (transform.position.y < -10)
+        {
+            Destroy(gameObject);
+        }
     }
 
     void FixedUpdate()

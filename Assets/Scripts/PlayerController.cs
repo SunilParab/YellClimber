@@ -5,6 +5,7 @@ public class PlayerController : PhysicsObject
 
     Vector2 velocity;
     Rigidbody2D rb;
+    public float minHeight = -8;
 
     [SerializeField] LayerMask floorLayers;
 
@@ -16,16 +17,22 @@ public class PlayerController : PhysicsObject
     [SerializeField] float percentYDeceleration;
     [SerializeField] float flatYDeceleration;
 
+    Vector2 spawnPoint;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        spawnPoint = transform.position;
     }
 
     // Update is called once per frame
     void Update()
     {
-        //Add to velocity here
+        if (transform.position.y < minHeight)
+        {
+            Die();
+        }
     }
 
     void FixedUpdate()
@@ -84,10 +91,12 @@ public class PlayerController : PhysicsObject
         }
     }
 
-    bool IsGrounded() { //TODO improve this
-        return Physics2D.OverlapCircle(
+    bool IsGrounded()
+    { //TODO improve this
+        return Physics2D.OverlapBox(
                             new(transform.position.x, transform.position.y - 0.75f),
-                            0.1f,
+                            new(1.4f, 0.15f),
+                            0,
                             floorLayers
                             );
     }
@@ -95,6 +104,20 @@ public class PlayerController : PhysicsObject
     public override void Push(Vector2 force)
     {
         velocity += force;
+    }
+
+    public void Die()
+    {
+        velocity = new();
+        transform.position = spawnPoint;
+        GetComponent<Yeller>().Reset();
+    }
+
+    void OnTriggerEnter2D(Collider2D collision)
+    {
+        if (collision.CompareTag("Checkpoint")) {
+            spawnPoint = collision.transform.position;
+        }
     }
 
 }

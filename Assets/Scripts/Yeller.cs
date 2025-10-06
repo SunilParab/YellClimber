@@ -4,12 +4,15 @@ using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(PhysicsObject))]
+[RequireComponent(typeof(AudioSource))]
 public class Yeller : MonoBehaviour
 {
 
     PhysicsObject body;
     InputAction interactAction;
 
+    [SerializeField] float yellCost = 2;
+    [SerializeField] float chargeSpeed = 2;
     [SerializeField] float selfPushForce = 2;
     [SerializeField] float otherPushForce = 2;
     [SerializeField] Collider2D pushCone;
@@ -17,6 +20,9 @@ public class Yeller : MonoBehaviour
     [SerializeField] float maxCharge = 100;
     float curCharge;
     [SerializeField] Image fillBar;
+    [SerializeField] GameObject visual;
+
+    AudioSource audioSource;
 
     int canCharge = 0;
 
@@ -24,6 +30,7 @@ public class Yeller : MonoBehaviour
     void Start()
     {
         body = GetComponent<PhysicsObject>();
+        audioSource = GetComponent<AudioSource>();
         interactAction = InputSystem.actions.FindAction("Attack");
 
         curCharge = maxCharge;
@@ -37,58 +44,68 @@ public class Yeller : MonoBehaviour
         Vector2 screenPosition = Mouse.current.position.ReadValue();
         Vector2 worldPosition = Camera.main.ScreenToWorldPoint(screenPosition);
 
-        pushCone.transform.eulerAngles = new(0,0, Vector2.SignedAngle(new Vector2(0,-1), worldPosition - (Vector2)transform.position));
+        pushCone.transform.eulerAngles = new(0, 0, Vector2.SignedAngle(new Vector2(0, -1), worldPosition - (Vector2)transform.position));
     }
 
     void FixedUpdate()
     {
 
-        if (canCharge <= 0) {
-            GainCharge(1);
+        if (canCharge <= 0)
+        {
+            GainCharge(chargeSpeed);
         }
 
         //Get mouse position
         Vector2 screenPosition = Mouse.current.position.ReadValue();
         Vector2 worldPosition = Camera.main.ScreenToWorldPoint(screenPosition);
 
-        if (interactAction.IsPressed())
+        if (interactAction.IsPressed() && (curCharge > yellCost))
         {
-            if (curCharge > 1)
+            visual.SetActive(true);
+
+            if (!audioSource.isPlaying)
             {
-                Vector2 pushVector = ((Vector2)body.transform.position - worldPosition).normalized;
-                pushVector *= selfPushForce;
+                audioSource.Play();
+            }
 
-                //Push player
-                body.Push(pushVector);
+            Vector2 pushVector = ((Vector2)body.transform.position - worldPosition).normalized;
+            pushVector *= selfPushForce;
 
-                //Push others
-                List<Collider2D> hits = new();
-                pushCone.Overlap(hits);
+            //Push player
+            body.Push(pushVector);
 
-                foreach (Collider2D col in hits)
+            //Push others
+            List<Collider2D> hits = new();
+            pushCone.Overlap(hits);
+
+            foreach (Collider2D col in hits)
+            {
+                PhysicsObject cur = col.GetComponent<PhysicsObject>();
+                if (cur == null)
                 {
-                    PhysicsObject cur = col.GetComponent<PhysicsObject>();
-                    if (cur == null)
-                    {
-                        continue;
-                    }
-                    if (cur == body)
-                    {
-                        continue;
-                    }
-
-                    Vector2 otherPushVector = (worldPosition - (Vector2)cur.transform.position).normalized;
-                    otherPushVector *= otherPushForce;
-
-                    cur.Push(otherPushVector);
-
+                    continue;
+                }
+                if (cur == body)
+                {
+                    continue;
                 }
 
-                //Use Charge
-                curCharge -= 1;
-                canCharge++;
-                Invoke(nameof(AllowCharge), 1.5f);
+                Vector2 otherPushVector = (worldPosition - (Vector2)cur.transform.position).normalized;
+                otherPushVector *= otherPushForce;
+
+                cur.Push(otherPushVector);
+
             }
+
+            //Use Charge
+            curCharge -= yellCost;
+            canCharge++;
+            Invoke(nameof(AllowCharge), 1f);
+        }
+        else
+        {
+            visual.SetActive(false);
+            audioSource.Stop();
         }
     }
 
@@ -104,6 +121,11 @@ public class Yeller : MonoBehaviour
     void AllowCharge()
     {
         canCharge--;
+    }
+
+    public void Reset()
+    {
+        curCharge = maxCharge;
     }
 
 }
